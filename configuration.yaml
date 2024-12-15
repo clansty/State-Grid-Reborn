@@ -1,0 +1,50 @@
+template:
+  - trigger:
+      - trigger: webhook
+        webhook_id: id
+        local_only: false
+    sensor:
+      - name: 国家电网刷新时间
+        state: "{{ trigger.json.time | as_datetime }}"
+        unique_id: elec_grid_refresh_time
+        device_class: timestamp
+      - name: 上月电费
+        state: "{{ trigger.json.last_month['price'] }}"
+        unique_id: elec_grid_last_month_price
+        device_class: monetary
+        unit_of_measurement: CNY
+      - name: 上月用电量
+        state: "{{ trigger.json.last_month.amount }}"
+        unique_id: elec_grid_last_month_amount
+        device_class: energy
+        unit_of_measurement: kWh
+      - name: 上月时段
+        state: "{{ trigger.json.last_month.time }}"
+        unique_id: elec_grid_last_month_time
+      - name: 当月总电量
+        state: "{{ trigger.json.this_month.amount }}"
+        unique_id: elec_grid_this_month_amount
+        state_class: total_increasing
+        device_class: energy
+        unit_of_measurement: kWh
+      - name: 当月峰电量
+        state: "{{ trigger.json.this_month.feng }}"
+        unique_id: elec_grid_this_month_feng
+        state_class: total_increasing
+        device_class: energy
+        unit_of_measurement: kWh
+      - name: 当月谷电量
+        state: "{{ trigger.json.this_month.gu }}"
+        unique_id: elec_grid_this_month_gu
+        state_class: total_increasing
+        device_class: energy
+        unit_of_measurement: kWh
+      - name: 当月电费估计
+        state: "{{ trigger.json.this_month.feng|float * 0.5583 + trigger.json.this_month.gu|float * 0.3583 }}"
+        unique_id: elec_grid_this_month_price
+        state_class: total_increasing
+        device_class: monetary
+        unit_of_measurement: CNY
+      - name: 最新电量时间
+        state: "{{ trigger.json.this_month.last_date }}"
+        unique_id: elec_grid_this_month_last_date
