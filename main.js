@@ -76,45 +76,48 @@ function recordMonth() {
     return { time, amount, price }
 }
 
+const START_X = 120
+const END_X = 1008
+const CHART_Y = 1330
+
+function getDaysInMonth(year, month) {
+    return new Date(year, month + 1, 0).getDate();
+}
+
+// 获取当前月份的天数
+let now = new Date();
+let daysInMonth = getDaysInMonth(now.getFullYear(), now.getMonth());
+
+let data = []
+
+function doRecordOneDay() {
+    let dateControl = textMatches(/^(\d)+月(\d)+日用电量$/).findOne()
+    let dateText = dateControl.text()
+    let match = dateText.match(/(\d)+月(\d)+日/)
+    let date = match[0]
+    // let date = match[1] + '-' + match[2]
+    let parent = dateControl.parent()
+    let usedAmountFeng = getElementNextToText(parent, '峰').text()
+    let usedAmountGu = getElementNextToText(parent, '谷').text()
+    let amount = getElementNextToText(parent, '(千瓦时)').text()
+    console.log('当日结果', date, amount, usedAmountFeng, usedAmountGu)
+    data.push({ date, amount, usedAmountFeng, usedAmountGu })
+}
+  
 function recordDaily() {
-    let ancur = text('电量(千瓦时)')
+    let ancur = text('本月累计电量')
     ancur.waitFor()
     sleep(1000)
-    let parent = ancur.findOne().parent()
-    let data = []
-    // swipeUp()
-    let days = getAllElementNextToText(parent, '尖用电：0', 4)
-    days.unshift(getElementBeforeText(parent, '尖用电：0'))
+    let cursor = START_X
+    let gap = (END_X - START_X) / daysInMonth
 
-    let count = 0
-    while (true) {
-        let currentActiveRow = days[count]
-        let date = currentActiveRow.child(0).text()
-        let amount = currentActiveRow.child(1).text()
-        let usedAmountFeng = textStartsWith('峰用电：').findOne().text().substring(4)
-        let usedAmountGu = textStartsWith('谷用电：').findOne().text().substring(4)
-        console.log('当日结果', date, amount, usedAmountFeng, usedAmountGu)
-        data.push({ date, amount, usedAmountFeng, usedAmountGu })
-        if (count % 5 === 0) {
-            // swipeUp()
-        }
-        count++
-        let nextDay = days[count]
-        let nextDayDate = nextDay.child(0).text()
-        console.log('nextDay', count, nextDayDate)
-        // while (processedDays.includes(nextDayDate)) {
-        //     count++
-        //     nextDay = nextDays[count]
-        //     nextDayDate = nextDay.child(0).text()
-        // }
-        // 温馨提示
-        if (nextDay.childCount() != 3) break;
-        nextDay.click()
-        sleep(1000);
-        // home()
-        // sleep(1000);
-        // app.launch("com.sgcc.wsgw.cn")
-        // sleep(1000);
+    for (let i = 0; i < daysInMonth; i++) {
+        click(cursor, CHART_Y)
+        sleep(200)
+        try {
+            doRecordOneDay()
+        } catch (e) { break }
+        cursor += gap
     }
 
     console.log('data', data)
@@ -143,13 +146,12 @@ auto.waitFor()
 // }
 
 waitAndClickText('上期电费')
-var month = recordMonth()
-waitAndClickText('日用电量')
-waitAndClickText('30天')
+// var month = recordMonth()
+// waitAndClickText('日用电量')
+// waitAndClickText('30天')
 var daily = recordDaily()
 let feng = 0, gu = 0, total = 0, date = getYYYYMM(), lastDate = "";
 for (let i = 0; i < daily.length; i++) {
-    if (!daily[i].date.startsWith(getYYYYMM() + '-')) continue;
     feng += parseFloat(daily[i].usedAmountFeng)
     gu += parseFloat(daily[i].usedAmountGu)
     total += parseFloat(daily[i].amount)
@@ -157,7 +159,7 @@ for (let i = 0; i < daily.length; i++) {
 }
 http.postJson(WEBHOOK_ID, {
     time: new Date().toISOString(),
-    last_month: month,
+    // last_month: month,
     this_month: {
         feng, gu,
         amount: total,
